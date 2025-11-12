@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { listTickets, updateTicketStatus, createTicket, Ticket, updateMe } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,6 +19,18 @@ export function Dashboard() {
   const [accountSector, setAccountSector] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
+  const loadTickets = useCallback(async () => {
+    try {
+      const data = await listTickets();
+      const visible = (data || []).filter(t => showFinished ? true : (t.status !== 'Resolvido' && t.status !== 'Fechado'));
+      setTickets(visible);
+    } catch (error) {
+      console.error('Erro ao carregar tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [showFinished]);
+
   useEffect(() => {
     if (user?.role === 'tecnico') {
       setActiveSection('listar');
@@ -29,19 +41,9 @@ export function Dashboard() {
     setAccountEmail(user?.email || '');
     setAccountSector(user?.sector ?? '');
     loadTickets();
-  }, [user?.role]);
+  }, [user?.role, user?.email, user?.name, user?.sector, loadTickets]);
 
-  const loadTickets = async () => {
-    try {
-      const data = await listTickets();
-      const visible = (data || []).filter(t => showFinished ? true : (t.status !== 'Resolvido' && t.status !== 'Fechado'));
-      setTickets(visible);
-    } catch (error) {
-      console.error('Erro ao carregar tickets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
 
   const loadTicketsWithFilter = async (includeFinished: boolean) => {
     try {
@@ -384,7 +386,7 @@ export function Dashboard() {
                   onClick={async () => {
                     try {
                       setSavingProfile(true);
-                      const payload: any = { name: accountName };
+                      const payload: { name: string; sector?: string } = { name: accountName };
                       if (user?.role !== 'tecnico') payload.sector = accountSector;
                       await updateMe(payload);
                       await refreshMe();
