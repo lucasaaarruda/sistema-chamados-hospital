@@ -2,7 +2,7 @@
 
 Este projeto contém:
 - Frontend React + Vite + TypeScript
-- Backend Java com SQLite (HTTP Server embutido)
+- Backend Java com PostgreSQL (HTTP Server embutido)
 
 O backend expõe endpoints REST para autenticação e gerenciamento de tickets; o frontend consome esses endpoints.
 
@@ -10,6 +10,7 @@ O backend expõe endpoints REST para autenticação e gerenciamento de tickets; 
 - Node.js 18+ e npm
 - Java 17+ (`java` e `javac` disponíveis no PATH)
 - Windows PowerShell
+- Servidor PostgreSQL acessível (local ou remoto)
 
 ## 1) Clonar o repositório
 - Clone o projeto e entre na pasta:
@@ -24,19 +25,27 @@ cd project-bolt/project
 npm install
 ```
 
-## 3) Configurar variáveis (opcional)
+## 3) Configurar variáveis
 - Por padrão, o frontend usa `http://localhost:8080` como API (variável `VITE_API_URL`).
 - Se quiser sobrescrever, crie um arquivo `.env` na raiz com:
 ```
 VITE_API_URL=http://localhost:8080
 ```
-- O backend aceita (opcional):
+- Backend (PostgreSQL):
+  - `PG_URL` (opcional, tem precedência) – ex.: `jdbc:postgresql://localhost:5432/hospital`
+  - ou defina individualmente: `PG_HOST`, `PG_PORT`, `PG_DB`, `PG_USER`, `PG_PASSWORD`
   - `JAVA_BACKEND_JWT_SECRET` (padrão: `LOCAL_DEV_SECRET`)
   - `CORS_ORIGIN` (padrão: `http://localhost:5173`, com suporte automático a `5174`)
-- Para definir temporariamente na sessão do PowerShell:
-```
-$env:JAVA_BACKEND_JWT_SECRET="LOCAL_DEV_SECRET"
-```
+  
+  Exemplo para sessão atual (PowerShell):
+  ```
+  $env:PG_HOST="localhost"
+  $env:PG_PORT="5432"
+  $env:PG_DB="hospital"
+  $env:PG_USER="postgres"
+  $env:PG_PASSWORD="<sua_senha>"
+  $env:JAVA_BACKEND_JWT_SECRET="LOCAL_DEV_SECRET"
+  ```
 
 ## 4) Iniciar o backend (PowerShell)
 - Se o PowerShell bloquear scripts, libere para a sessão atual:
@@ -48,7 +57,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ./java-backend/run.ps1
 ```
 - O servidor sobe em: `http://localhost:8080`
-- O banco é criado automaticamente em: `java-backend\data\hospital.db` (tabelas `users` e `tickets`)
+- Na primeira execução, as tabelas `users` e `tickets` são criadas automaticamente no banco PostgreSQL configurado.
 
 ## 5) Iniciar o frontend (Vite)
 - Suba o servidor de desenvolvimento:
@@ -87,6 +96,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - API não acessível:
 - Verifique se backend está ativo em `http://localhost:8080`.
 - Confirme `VITE_API_URL` apontando para a mesma URL.
+- Não conecta ao banco:
+- Verifique credenciais `PG_*` e se o servidor PostgreSQL aceita conexões na porta configurada.
+- Se usar `PG_URL`, ele tem precedência sobre as variáveis individuais.
 - Node/Java não encontrados:
 - Instale as versões exigidas e verifique `node`, `npm`, `java`, `javac` no `PATH`.
 
@@ -102,10 +114,9 @@ npm run preview
 
 ## Estrutura do projeto (resumo)
 - `src/` – frontend (componentes `Auth`, `Dashboard`, contexto `AuthContext`, cliente `api.ts`)
-- `java-backend/` – backend Java (`run.ps1`, código em `src/com/hospital/tickets/`, libs em `lib/`, dados em `data/`)
+- `java-backend/` – backend Java (`run.ps1`, código em `src/com/hospital/tickets/`, libs em `lib/`)
 - `.env` – variáveis do frontend (opcional)
 - `package.json` – scripts (`dev`, `build`, `preview`, `lint`, `typecheck`)
 
 ## Observação sobre dados
-- Os arquivos de banco e JSON em `java-backend/data/` são ignorados pelo Git via `.gitignore`.
-- Antes de subir para o GitHub, garanta que a pasta `java-backend/data/` não contenha dados sensíveis (o backend recria o banco vazio ao rodar).
+- O projeto não usa arquivos locais de banco; os dados ficam no servidor PostgreSQL configurado.

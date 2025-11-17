@@ -9,20 +9,17 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.*;
 
 public class Main {
-    private static final String DATA_DIR = resolveDataDir();
+    
     private static final String JWT_SECRET = Optional.ofNullable(System.getenv("JAVA_BACKEND_JWT_SECRET")).orElse("LOCAL_DEV_SECRET");
     private static final String CORS_ORIGIN = Optional.ofNullable(System.getenv("CORS_ORIGIN")).orElse("http://localhost:5173");
 
     public static void main(String[] args) throws Exception {
-        ensureDataFiles();
-        Database.init(DATA_DIR);
+        Database.init();
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
         server.createContext("/auth/signup", Main::handleSignup);
@@ -31,6 +28,7 @@ public class Main {
 
         server.createContext("/tickets", Main::handleTickets);
         server.createContext("/ticket", Main::handleTicketById);
+        server.createContext("/users", Main::handleUsers);
 
         server.setExecutor(null);
         System.out.println("Java backend iniciado em http://localhost:8080");
@@ -39,21 +37,7 @@ public class Main {
 
 
     
-    private static String resolveDataDir() {
-        try {
-            Path dir = Path.of("java-backend", "data");
-            return dir.toString();
-        } catch (Exception ignored) {
-            return "java-backend" + File.separator + "data";
-        }
-    }
-
-    private static void ensureDataFiles() throws IOException {
-        Path dataPath = Path.of(DATA_DIR);
-        if (!Files.exists(dataPath)) {
-            Files.createDirectories(dataPath);
-        }
-    }
+    
 
     private static void setCors(HttpExchange exchange) {
         String requestOrigin = exchange.getRequestHeaders().getFirst("Origin");
@@ -452,6 +436,25 @@ public class Main {
             respond(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
         } catch (Exception e) {
             respond(exchange, 500, "{\"error\":\"Falha ao manipular ticket\"}");
+        }
+    }
+
+    private static void handleUsers(HttpExchange exchange) throws IOException {
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { respond(exchange, 204, ""); return; }
+        Optional<Map<String, String>> auth = authenticate(exchange);
+        if (auth.isEmpty()) { respond(exchange, 401, "{\"error\":\"Não autenticado\"}"); return; }
+        Map<String, String> user = auth.get();
+        if (!"tecnico".equals(user.getOrDefault("role", "usuario"))) {
+            respond(exchange, 403, "{\"error\":\"Apenas técnicos podem listar usuários\"}");
+            return;
+        }
+        String method = exchange.getRequestMethod();
+        if (!"GET".equalsIgnoreCase(method)) { respond(exchange, 405, "{\"error\":\"Method Not Allowed\"}"); return; }
+        try {
+            List<Map<String, Object>> users = Database.listUsers();
+            respond(exchange, 200, toJson(users));
+        } catch (Exception e) {
+            respond(exchange, 500, "{\"error\":\"Falha ao listar usuários\"}");
         }
     }
 

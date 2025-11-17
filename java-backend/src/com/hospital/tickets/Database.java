@@ -1,8 +1,5 @@
 package com.hospital.tickets;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,18 +7,27 @@ import java.util.List;
 import java.util.Map;
 
 public class Database {
-    private static String dbFilePath;
+    private static String dbUrl;
+    private static String dbUser;
+    private static String dbPassword;
 
-    public static void init(String dataDir) throws Exception {
-        dbFilePath = dataDir + File.separator + "hospital.db";
-        Path dir = Path.of(dataDir);
-        if (!Files.exists(dir)) {
-            Files.createDirectories(dir);
+    public static void init() throws Exception {
+        String envUrl = System.getenv("PG_URL");
+        if (envUrl != null && !envUrl.isBlank()) {
+            dbUrl = envUrl;
+        } else {
+            String host = System.getenv("PG_HOST") != null ? System.getenv("PG_HOST") : "localhost";
+            String port = System.getenv("PG_PORT") != null ? System.getenv("PG_PORT") : "5432";
+            String db = System.getenv("PG_DB") != null ? System.getenv("PG_DB") : "hospital";
+            dbUrl = "jdbc:postgresql://" + host + ":" + port + "/" + db;
         }
+        dbUser = System.getenv("PG_USER") != null ? System.getenv("PG_USER") : "postgres";
+        dbPassword = System.getenv("PG_PASSWORD") != null ? System.getenv("PG_PASSWORD") : "";
+
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("SQLite JDBC driver não encontrado no classpath", e);
+            throw new IllegalStateException("PostgreSQL JDBC driver não encontrado no classpath", e);
         }
         try (Connection conn = getConnection()) {
             try (Statement st = conn.createStatement()) {
@@ -51,11 +57,13 @@ public class Database {
                         "updated_at TEXT NOT NULL" +
                         ")");
             }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Falha ao conectar ao PostgreSQL. Defina PG_URL ou PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD.", e);
         }
     }
 
     private static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:sqlite:" + dbFilePath);
+        return DriverManager.getConnection(dbUrl, dbUser, dbPassword);
     }
 
     public static long countUsers() throws Exception {
@@ -233,6 +241,25 @@ public class Database {
                 t.put("created_at", rs.getString("created_at"));
                 t.put("updated_at", rs.getString("updated_at"));
                 list.add(t);
+            }
+        }
+        return list;
+    }
+
+    public static List<Map<String, Object>> listUsers() throws Exception {
+        List<Map<String, Object>> list = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id, email, name, role, sector, created_at FROM users ORDER BY created_at DESC");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", rs.getString("id"));
+                u.put("email", rs.getString("email"));
+                u.put("name", rs.getString("name"));
+                u.put("role", rs.getString("role"));
+                u.put("sector", rs.getString("sector"));
+                u.put("created_at", rs.getString("created_at"));
+                list.add(u);
             }
         }
         return list;

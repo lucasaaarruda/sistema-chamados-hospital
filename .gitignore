@@ -24,5 +24,3 @@ dist-ssr
 
 # Artefatos gerados do Java backend
 java-backend/out/
-java-backend/data/*.db
-java-backend/data/*.json
