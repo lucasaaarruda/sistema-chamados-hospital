@@ -13,10 +13,10 @@ O backend expõe endpoints REST para autenticação e gerenciamento de tickets; 
 - Servidor PostgreSQL acessível (local ou remoto)
 
 ## 1) Clonar o repositório
-- Clone o projeto e entre na pasta:
+- Clone o projeto e entre na pasta local do projeto:
 ```
 git clone <URL_DO_REPOSITORIO>
-cd project-bolt/project
+cd <pasta_do_projeto>
 ```
 
 ## 2) Instalar dependências do frontend
@@ -47,7 +47,11 @@ VITE_API_URL=http://localhost:8080
   $env:JAVA_BACKEND_JWT_SECRET="LOCAL_DEV_SECRET"
   ```
 
-## 4) Iniciar o backend (PowerShell)
+## 4) Baixar o driver JDBC do PostgreSQL
+- Baixe o arquivo `postgresql-<versão>.jar` do Maven Central e salve como `java-backend/lib/postgresql.jar`.
+- Exemplo de página: https://repo1.maven.org/maven2/org/postgresql/postgresql/
+
+## 5) Iniciar o backend (PowerShell)
 - Se o PowerShell bloquear scripts, libere para a sessão atual:
 ```
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -59,7 +63,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - O servidor sobe em: `http://localhost:8080`
 - Na primeira execução, as tabelas `users` e `tickets` são criadas automaticamente no banco PostgreSQL configurado.
 
-## 5) Iniciar o frontend (Vite)
+## 6) Iniciar o frontend (Vite)
 - Suba o servidor de desenvolvimento:
 ```
 npm run dev
